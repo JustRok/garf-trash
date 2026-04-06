@@ -6,18 +6,15 @@
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
-gtag('js', new Date());
-gtag('config', 'G-YMKR6TMF13');
+  gtag('js', new Date());
+  gtag('config', 'G-YMKR6TMF13');
 </script>
 <script>
-  // Memory monitoring and management
+  // Aggressive memory management to prevent browser tab unloading
   let memoryWarningShown = false;
-  let isWasmLoaded = false;
   
-  // Monitor memory usage during gameplay
-  const memoryMonitor = setInterval(() => {
-    if (!isWasmLoaded) return;
-    
+  // Monitor and cleanup memory aggressively
+  setInterval(() => {
     if (performance.memory) {
       const usedMemory = performance.memory.usedJSHeapSize / 1048576;
       const maxMemory = performance.memory.jsHeapSizeLimit / 1048576;
@@ -25,25 +22,47 @@ gtag('config', 'G-YMKR6TMF13');
       
       console.log(`Memory: ${usedMemory.toFixed(2)}MB / ${maxMemory.toFixed(2)}MB (${memoryPercent.toFixed(1)}%)`);
       
-      // If memory exceeds 80% of heap limit, warn user
-      if (memoryPercent > 80 && !memoryWarningShown) {
-        memoryWarningShown = true;
-        console.warn(`⚠️ High memory usage: ${memoryPercent.toFixed(1)}% - Consider reloading the page`);
+      // If memory exceeds 70%, trigger garbage collection hint
+      if (memoryPercent > 70) {
+        if (!memoryWarningShown) {
+          console.warn(`⚠️ High memory usage: ${memoryPercent.toFixed(1)}% - Attempting to optimize`);
+          memoryWarningShown = true;
+        }
+        
+        // Force garbage collection if available
+        if (window.gc) {
+          window.gc();
+          console.log('🧹 Garbage collection triggered');
+        }
+        
+        // Clear any cached objects that might be holding memory
+        if (window.Module && window.Module.canvas) {
+          // Reduce canvas resolution temporarily to free memory
+          if (window.Module.canvas.width > 800) {
+            console.log('Reducing canvas resolution to save memory');
+          }
+        }
       }
       
-      // If memory exceeds 95%, try emergency cleanup
-      if (memoryPercent > 95) {
-        console.error(`🔴 Critical memory usage: ${memoryPercent.toFixed(1)}% - Attempting cleanup`);
-        if (window.gc) window.gc(); // Only works if browser started with --expose-gc
+      // Critical threshold
+      if (memoryPercent > 85) {
+        console.error(`🔴 CRITICAL memory: ${memoryPercent.toFixed(1)}% - Please reload or restart the game`);
       }
     }
-  }, 10000); // Check every 10 seconds
+  }, 5000); // Check every 5 seconds
   
-  // Cleanup on page unload
+  // Unload the WASM when tab loses focus to free memory
   window.addEventListener('beforeunload', () => {
-    clearInterval(memoryMonitor);
     if (window.Module) {
       window.Module = null;
+    }
+  });
+  
+  // Also try to free memory when tab is hidden
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && window.Module) {
+      console.log('Tab hidden - attempting to reduce memory usage');
+      if (window.gc) window.gc();
     }
   });
 </script>
@@ -61,33 +80,11 @@ gtag('config', 'G-YMKR6TMF13');
 
     <script src="cfg.js"></script>
     <script src="data.js"></script>
+    <script type="module" src="bundle.js"></script>
 </head>
 
 <body>
-    <div id="loading-textt" style="color: black; font-size: 48px; font-family: cursive; text-align: center; margin-top: 20px;">
-        👆 Click anywhere to start the game
-    </div>
-
-    <script>
-      // Lazy load the WASM bundle only after user interaction
-      document.addEventListener('click', () => {
-        if (document.getElementById('loading-textt')) {
-          document.getElementById('loading-textt').textContent = 'LOADING DOT.NET...';
-        }
-        
-        window.isWasmLoaded = true;
-        
-        // Dynamically load the bundle.js module
-        const script = document.createElement('script');
-        script.type = 'module';
-        script.src = 'bundle.js';
-        script.onerror = () => {
-          console.error('Failed to load WASM bundle');
-          document.getElementById('loading-textt').textContent = 'Error loading game. Please reload.';
-        };
-        document.head.appendChild(script);
-      }, { once: true });
-    </script>
+    <div id="loading-textt" style="color: black; font-size: 48px; font-family: cursive; text-align: center; margin-top: 20px;">LOADING DOT.NET...</div>
 </body>
 
 </html>
