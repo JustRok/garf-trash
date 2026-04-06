@@ -1,36 +1,93 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<!--  Licensed to the .NET Foundation under one or more agreements. -->
+<!-- The .NET Foundation licenses this file to you under the MIT license. -->
+<html>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-YMKR6TMF13"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-YMKR6TMF13');
+</script>
+<script>
+  // Memory monitoring and management
+  let memoryWarningShown = false;
+  let isWasmLoaded = false;
+  
+  // Monitor memory usage during gameplay
+  const memoryMonitor = setInterval(() => {
+    if (!isWasmLoaded) return;
+    
+    if (performance.memory) {
+      const usedMemory = performance.memory.usedJSHeapSize / 1048576;
+      const maxMemory = performance.memory.jsHeapSizeLimit / 1048576;
+      const memoryPercent = (usedMemory / maxMemory) * 100;
+      
+      console.log(`Memory: ${usedMemory.toFixed(2)}MB / ${maxMemory.toFixed(2)}MB (${memoryPercent.toFixed(1)}%)`);
+      
+      // If memory exceeds 80% of heap limit, warn user
+      if (memoryPercent > 80 && !memoryWarningShown) {
+        memoryWarningShown = true;
+        console.warn(`⚠️ High memory usage: ${memoryPercent.toFixed(1)}% - Consider reloading the page`);
+      }
+      
+      // If memory exceeds 95%, try emergency cleanup
+      if (memoryPercent > 95) {
+        console.error(`🔴 Critical memory usage: ${memoryPercent.toFixed(1)}% - Attempting cleanup`);
+        if (window.gc) window.gc(); // Only works if browser started with --expose-gc
+      }
+    }
+  }, 10000); // Check every 10 seconds
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    clearInterval(memoryMonitor);
+    if (window.Module) {
+      window.Module = null;
+    }
+  });
+</script>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Optimized Index</title>
-    <script>
-        // Function to lazy-load WASM
-        async function loadWasm() {
-            const memoryMonitor = new PerformanceObserver((list) => {
-                const entries = list.getEntries();
-                entries.forEach((entry) => {
-                    console.log(`Memory used: ${entry.usage}`);
-                    // Implement your memory check logic here
-                });
-            });
-            memoryMonitor.observe({ type: 'resource', buffered: true });
+    <base href="https://cdn.jsdelivr.net/gh/web-ports/celeste@4f043a5ce121b74dc54ce56d74f213a2eeea6b4e/">
+    <title>CelesteWasm</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-            const wasmModule = await WebAssembly.instantiateStreaming(fetch('path/to/your.wasm'));
-            return wasmModule.instance;
+    <link rel="icon" type="image/x-icon" href="assets/app.ico" />
+    <link rel="stylesheet" href="styles.css" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=Inter+Tight:ital,wght@0,10[...]"
+        rel="stylesheet" />
+
+    <script src="cfg.js"></script>
+    <script src="data.js"></script>
+</head>
+
+<body>
+    <div id="loading-textt" style="color: black; font-size: 48px; font-family: cursive; text-align: center; margin-top: 20px;">
+        👆 Click anywhere to start the game
+    </div>
+
+    <script>
+      // Lazy load the WASM bundle only after user interaction
+      document.addEventListener('click', () => {
+        if (document.getElementById('loading-textt')) {
+          document.getElementById('loading-textt').textContent = 'LOADING DOT.NET...';
         }
         
-        document.addEventListener('DOMContentLoaded', () => {
-            loadWasm().then(instance => {
-                // Use the WASM instance
-                console.log('WASM loaded successfully');
-            }).catch(err => {
-                console.error('Error loading WASM:', err);
-            });
-        });
+        window.isWasmLoaded = true;
+        
+        // Dynamically load the bundle.js module
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = 'bundle.js';
+        script.onerror = () => {
+          console.error('Failed to load WASM bundle');
+          document.getElementById('loading-textt').textContent = 'Error loading game. Please reload.';
+        };
+        document.head.appendChild(script);
+      }, { once: true });
     </script>
-</head>
-<body>
-    <h1>Hello, World!</h1>
 </body>
+
 </html>
