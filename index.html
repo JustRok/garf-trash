@@ -9,6 +9,14 @@
   gtag('js', new Date());
   gtag('config', 'G-YMKR6TMF13');
 </script>
+<script>
+  // Unload the WASM when tab loses focus to free memory
+  window.addEventListener('beforeunload', () => {
+    if (window.Module) {
+      window.Module = null;
+    }
+  });
+</script>
 <head>
     <base href="https://cdn.jsdelivr.net/gh/web-ports/celeste@4f043a5ce121b74dc54ce56d74f213a2eeea6b4e/">
     <title>CelesteWasm</title>
